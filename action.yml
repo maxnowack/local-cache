@@ -1,0 +1,31 @@
+name: 'local-cache'
+description: "Github Action to provide caching data by placing a tarball on the local filesystem"
+inputs:
+  path:
+    description: 'A list of files, directories, and wildcard patterns to cache and restore'
+    required: true
+  key:
+    description: 'An explicit key for restoring and saving the cache'
+    required: true
+  restore-keys:
+    description: 'An ordered list of keys to use for restoring stale cache if no cache hit occurred for key. Note `cache-hit` returns false in this case.'
+    required: false
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache entry is not found'
+    default: 'false'
+    required: false
+  lookup-only:
+    description: 'Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache'
+    default: 'false'
+    required: false
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate if cache was found and restored'
+runs:
+  using: 'node16'
+  main: 'dist/restore.js'
+  post: 'dist/save.js'
+  post-if: success()
+branding:
+  icon: 'archive'
+  color: 'gray-dark'

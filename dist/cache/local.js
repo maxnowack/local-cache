@@ -23,25 +23,20 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getLocalArchivePath = exports.getLocalCacheEntry = void 0;
+exports.getLocalArchiveFolder = exports.getLocalCacheEntry = void 0;
 const path = __importStar(require("path"));
-const io_1 = require("@actions/io");
 const io_util_1 = require("@actions/io/lib/io-util");
-const { GITHUB_REPOSITORY, RUNNER_TOOL_CACHE } = process.env;
-async function getLocalCacheEntry(keys) {
-    if (!RUNNER_TOOL_CACHE) {
-        throw new TypeError('Expected RUNNER_TOOL_CACHE environment variable to be defined.');
-    }
-    if (!GITHUB_REPOSITORY) {
-        throw new TypeError('Expected GITHUB_REPOSITORY environment variable to be defined.');
-    }
-    const result = await keys.reduce(async (memo, key) => {
-        if (await memo)
+const tar_1 = require("./tar");
+async function getLocalCacheEntry(keys, compressionMethod) {
+    const cacheFileName = await (0, tar_1.getCacheFileName)(compressionMethod);
+    const result = await keys.reduce(async (asyncMemo, key) => {
+        const memo = await asyncMemo;
+        if (memo)
             return memo;
-        const cacheDir = path.join(RUNNER_TOOL_CACHE, GITHUB_REPOSITORY, key);
+        const cacheDir = getLocalArchiveFolder(key);
         if (!await (0, io_util_1.exists)(cacheDir))
             return undefined;
-        const archiveLocation = path.join(cacheDir, 'cache.tgz');
+        const archiveLocation = path.join(cacheDir, cacheFileName);
         if (!await (0, io_util_1.exists)(archiveLocation))
             return undefined;
         return {
@@ -52,16 +47,14 @@ async function getLocalCacheEntry(keys) {
     return result;
 }
 exports.getLocalCacheEntry = getLocalCacheEntry;
-async function getLocalArchivePath(key) {
+function getLocalArchiveFolder(key) {
+    const { GITHUB_REPOSITORY, RUNNER_TOOL_CACHE } = process.env;
     if (!RUNNER_TOOL_CACHE) {
         throw new TypeError('Expected RUNNER_TOOL_CACHE environment variable to be defined.');
     }
     if (!GITHUB_REPOSITORY) {
         throw new TypeError('Expected GITHUB_REPOSITORY environment variable to be defined.');
     }
-    const cacheDir = path.join(RUNNER_TOOL_CACHE, GITHUB_REPOSITORY, key);
-    await (0, io_1.mkdirP)(cacheDir);
-    const archiveLocation = path.join(cacheDir, 'cache.tgz');
-    return archiveLocation;
+    return path.join(RUNNER_TOOL_CACHE, GITHUB_REPOSITORY, key);
 }
-exports.getLocalArchivePath = getLocalArchivePath;
+exports.getLocalArchiveFolder = getLocalArchiveFolder;

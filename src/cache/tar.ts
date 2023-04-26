@@ -49,15 +49,31 @@ async function getTarPath(): Promise<ArchiveTool> {
   } as ArchiveTool
 }
 
+export async function getCacheFileName(
+  compressionMethod: CompressionMethod,
+  resolveTarPath = getTarPath(),
+) {
+  const tarPath = await resolveTarPath
+  const BSD_TAR_ZSTD = tarPath.type === ArchiveToolType.BSD
+    && compressionMethod !== CompressionMethod.Gzip
+    && IS_WINDOWS
+  return BSD_TAR_ZSTD
+    ? 'cache.tar'
+    : utils.getCacheFileName(compressionMethod)
+}
+
 // Return arguments for tar as per tarPath, compressionMethod, method type and os
-function getTarArgs(
+async function getTarArgs(
   tarPath: ArchiveTool,
   compressionMethod: CompressionMethod,
   type: string,
   archivePath = '',
 ): Promise<string[]> {
   const args = [`"${tarPath.path}"`]
-  const cacheFileName = utils.getCacheFileName(compressionMethod)
+  const cacheFileName = path.join(archivePath, await getCacheFileName(
+    compressionMethod,
+    Promise.resolve(tarPath),
+  ))
   const tarFile = 'cache.tar'
   const workingDirectory = getWorkingDirectory()
   // Speficic args for BSD tar on windows for workaround
@@ -71,13 +87,7 @@ function getTarArgs(
       args.push(
         '--posix',
         '-cf',
-        BSD_TAR_ZSTD
-          ? tarFile
-          : cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
-        '--exclude',
-        BSD_TAR_ZSTD
-          ? tarFile
-          : cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
+        cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
         '-P',
         '-C',
         workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
@@ -290,6 +300,6 @@ export async function createTar(
     path.join(archiveFolder, ManifestFilename),
     sourceDirectories.join('\n'),
   )
-  const commands = await getCommands(compressionMethod, 'create')
+  const commands = await getCommands(compressionMethod, 'create', archiveFolder)
   await execCommands(commands, archiveFolder)
 }

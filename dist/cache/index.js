@@ -82,7 +82,7 @@ async function restoreCache(paths, primaryKey, restoreKeys, lookupOnly) {
     let archivePath = '';
     try {
         // path are needed to compute version
-        const cacheEntry = await (0, local_1.getLocalCacheEntry)(keys);
+        const cacheEntry = await (0, local_1.getLocalCacheEntry)(keys, compressionMethod);
         if (!cacheEntry?.archiveLocation) {
             // Cache not found
             return undefined;
@@ -111,15 +111,6 @@ async function restoreCache(paths, primaryKey, restoreKeys, lookupOnly) {
             core.warning(`Failed to restore: ${error.message}`);
         }
     }
-    finally {
-        // Try to delete the archive to save space
-        try {
-            await utils.unlinkFile(archivePath);
-        }
-        catch (error) {
-            core.debug(`Failed to delete archive: ${error.message}`);
-        }
-    }
     return undefined;
 }
 exports.restoreCache = restoreCache;
@@ -144,7 +135,8 @@ async function saveCache(paths, key) {
         // eslint-disable-next-line max-len
         'Path Validation Error: Path(s) specified in the action for caching do(es) not exist, hence no cache is being saved.');
     }
-    const archiveFolder = await utils.createTempDirectory();
+    const archiveFolder = (0, local_1.getLocalArchiveFolder)(key);
+    await io.mkdirP(archiveFolder);
     const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
     core.debug(`Archive Path: ${archivePath}`);
     try {
@@ -159,8 +151,6 @@ async function saveCache(paths, key) {
         if (archiveFileSize > fileSizeLimit && !utils.isGhes()) {
             throw new Error(`Cache size of ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B) is over the 10GB limit, not saving cache.`);
         }
-        core.debug(`Saving Cache (ID: ${key})`);
-        await io.cp(archivePath, await (0, local_1.getLocalArchivePath)(key));
     }
     catch (error) {
         const typedError = error;
@@ -172,15 +162,6 @@ async function saveCache(paths, key) {
         }
         else {
             core.warning(`Failed to save: ${typedError.message}`);
-        }
-    }
-    finally {
-        // Try to delete the archive to save space
-        try {
-            await utils.unlinkFile(archivePath);
-        }
-        catch (error) {
-            core.debug(`Failed to delete archive: ${error.message}`);
         }
     }
 }

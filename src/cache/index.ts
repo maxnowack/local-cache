@@ -4,7 +4,7 @@ import * as io from '@actions/io'
 import * as utils from './cacheUtils'
 import { createTar, extractTar, listTar } from './tar'
 import { ValidationError, ReserveCacheError } from './errors'
-import { getLocalCacheEntry, getLocalArchivePath } from './local'
+import { getLocalCacheEntry, getLocalArchiveFolder } from './local'
 
 function checkPaths(paths: string[]): void {
   if (!paths || paths.length === 0) {
@@ -77,7 +77,7 @@ export async function restoreCache(
   let archivePath = ''
   try {
     // path are needed to compute version
-    const cacheEntry = await getLocalCacheEntry(keys)
+    const cacheEntry = await getLocalCacheEntry(keys, compressionMethod)
     if (!cacheEntry?.archiveLocation) {
       // Cache not found
       return undefined
@@ -113,13 +113,6 @@ export async function restoreCache(
       // Supress all non-validation cache related errors because caching should be optional
       core.warning(`Failed to restore: ${(error as Error).message}`)
     }
-  } finally {
-    // Try to delete the archive to save space
-    try {
-      await utils.unlinkFile(archivePath)
-    } catch (error) {
-      core.debug(`Failed to delete archive: ${(error as Error).message}`)
-    }
   }
 
   return undefined
@@ -153,7 +146,8 @@ export async function saveCache(
     )
   }
 
-  const archiveFolder = await utils.createTempDirectory()
+  const archiveFolder = getLocalArchiveFolder(key)
+  await io.mkdirP(archiveFolder)
   const archivePath = path.join(
     archiveFolder,
     utils.getCacheFileName(compressionMethod),
@@ -178,9 +172,6 @@ export async function saveCache(
         )} MB (${archiveFileSize} B) is over the 10GB limit, not saving cache.`,
       )
     }
-
-    core.debug(`Saving Cache (ID: ${key})`)
-    await io.cp(archivePath, await getLocalArchivePath(key))
   } catch (error) {
     const typedError = error as Error
     if (typedError.name === ValidationError.name) {
@@ -189,13 +180,6 @@ export async function saveCache(
       core.info(`Failed to save: ${typedError.message}`)
     } else {
       core.warning(`Failed to save: ${typedError.message}`)
-    }
-  } finally {
-    // Try to delete the archive to save space
-    try {
-      await utils.unlinkFile(archivePath)
-    } catch (error) {
-      core.debug(`Failed to delete archive: ${(error as Error).message}`)
     }
   }
 }

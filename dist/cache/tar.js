@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createTar = exports.extractTar = exports.listTar = void 0;
+exports.createTar = exports.extractTar = exports.listTar = exports.getCacheFileName = void 0;
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
 const exec_1 = require("@actions/exec");
@@ -66,10 +66,20 @@ async function getTarPath() {
         type: constants_1.ArchiveToolType.GNU,
     };
 }
+async function getCacheFileName(compressionMethod, resolveTarPath = getTarPath()) {
+    const tarPath = await resolveTarPath;
+    const BSD_TAR_ZSTD = tarPath.type === constants_1.ArchiveToolType.BSD
+        && compressionMethod !== constants_1.CompressionMethod.Gzip
+        && IS_WINDOWS;
+    return BSD_TAR_ZSTD
+        ? 'cache.tar'
+        : utils.getCacheFileName(compressionMethod);
+}
+exports.getCacheFileName = getCacheFileName;
 // Return arguments for tar as per tarPath, compressionMethod, method type and os
-function getTarArgs(tarPath, compressionMethod, type, archivePath = '') {
+async function getTarArgs(tarPath, compressionMethod, type, archivePath = '') {
     const args = [`"${tarPath.path}"`];
-    const cacheFileName = utils.getCacheFileName(compressionMethod);
+    const cacheFileName = path.join(archivePath, await getCacheFileName(compressionMethod, Promise.resolve(tarPath)));
     const tarFile = 'cache.tar';
     const workingDirectory = getWorkingDirectory();
     // Speficic args for BSD tar on windows for workaround
@@ -79,11 +89,7 @@ function getTarArgs(tarPath, compressionMethod, type, archivePath = '') {
     // Method specific args
     switch (type) {
         case 'create':
-            args.push('--posix', '-cf', BSD_TAR_ZSTD
-                ? tarFile
-                : cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '--exclude', BSD_TAR_ZSTD
-                ? tarFile
-                : cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '--files-from', constants_1.ManifestFilename);
+            args.push('--posix', '-cf', cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '--files-from', constants_1.ManifestFilename);
             break;
         case 'extract':
             args.push('-xf', BSD_TAR_ZSTD
@@ -239,7 +245,7 @@ exports.extractTar = extractTar;
 async function createTar(archiveFolder, sourceDirectories, compressionMethod) {
     // Write source directories to manifest.txt to avoid command length limits
     (0, fs_1.writeFileSync)(path.join(archiveFolder, constants_1.ManifestFilename), sourceDirectories.join('\n'));
-    const commands = await getCommands(compressionMethod, 'create');
+    const commands = await getCommands(compressionMethod, 'create', archiveFolder);
     await execCommands(commands, archiveFolder);
 }
 exports.createTar = createTar;

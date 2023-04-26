@@ -1,28 +1,24 @@
 import * as path from 'path'
-import { mkdirP } from '@actions/io'
 import { exists } from '@actions/io/lib/io-util'
+import { CompressionMethod } from './constants'
+import { getCacheFileName } from './tar'
 
 interface CacheResult {
   cacheKey: string,
   archiveLocation: string,
 }
 
-const { GITHUB_REPOSITORY, RUNNER_TOOL_CACHE } = process.env
-
-export async function getLocalCacheEntry(keys: string[]): Promise<CacheResult | undefined> {
-  if (!RUNNER_TOOL_CACHE) {
-    throw new TypeError('Expected RUNNER_TOOL_CACHE environment variable to be defined.')
-  }
-
-  if (!GITHUB_REPOSITORY) {
-    throw new TypeError('Expected GITHUB_REPOSITORY environment variable to be defined.')
-  }
-
-  const result = await keys.reduce<Promise<CacheResult | undefined>>(async (memo, key) => {
-    if (await memo) return memo
-    const cacheDir = path.join(RUNNER_TOOL_CACHE, GITHUB_REPOSITORY, key)
+export async function getLocalCacheEntry(
+  keys: string[],
+  compressionMethod: CompressionMethod,
+): Promise<CacheResult | undefined> {
+  const cacheFileName = await getCacheFileName(compressionMethod)
+  const result = await keys.reduce<Promise<CacheResult | undefined>>(async (asyncMemo, key) => {
+    const memo = await asyncMemo
+    if (memo) return memo
+    const cacheDir = getLocalArchiveFolder(key)
     if (!await exists(cacheDir)) return undefined
-    const archiveLocation = path.join(cacheDir, 'cache.tgz')
+    const archiveLocation = path.join(cacheDir, cacheFileName)
     if (!await exists(archiveLocation)) return undefined
     return {
       cacheKey: key,
@@ -32,7 +28,8 @@ export async function getLocalCacheEntry(keys: string[]): Promise<CacheResult | 
   return result
 }
 
-export async function getLocalArchivePath(key: string): Promise<string> {
+export function getLocalArchiveFolder(key: string) {
+  const { GITHUB_REPOSITORY, RUNNER_TOOL_CACHE } = process.env
   if (!RUNNER_TOOL_CACHE) {
     throw new TypeError('Expected RUNNER_TOOL_CACHE environment variable to be defined.')
   }
@@ -41,8 +38,5 @@ export async function getLocalArchivePath(key: string): Promise<string> {
     throw new TypeError('Expected GITHUB_REPOSITORY environment variable to be defined.')
   }
 
-  const cacheDir = path.join(RUNNER_TOOL_CACHE, GITHUB_REPOSITORY, key)
-  await mkdirP(cacheDir)
-  const archiveLocation = path.join(cacheDir, 'cache.tgz')
-  return archiveLocation
+  return path.join(RUNNER_TOOL_CACHE, GITHUB_REPOSITORY, key)
 }

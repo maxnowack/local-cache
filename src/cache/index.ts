@@ -180,7 +180,7 @@ export async function saveCache(
     }
 
     core.debug(`Saving Cache (ID: ${key})`)
-    await io.mv(archivePath, await getLocalArchivePath(key))
+    await io.cp(archivePath, await getLocalArchivePath(key))
   } catch (error) {
     const typedError = error as Error
     if (typedError.name === ValidationError.name) {

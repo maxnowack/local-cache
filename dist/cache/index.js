@@ -160,7 +160,7 @@ async function saveCache(paths, key) {
             throw new Error(`Cache size of ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B) is over the 10GB limit, not saving cache.`);
         }
         core.debug(`Saving Cache (ID: ${key})`);
-        await io.mv(archivePath, await (0, local_1.getLocalArchivePath)(key));
+        await io.cp(archivePath, await (0, local_1.getLocalArchivePath)(key));
     }
     catch (error) {
         const typedError = error;

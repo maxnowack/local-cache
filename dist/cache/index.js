@@ -135,7 +135,7 @@ async function saveCache(paths, key) {
         // eslint-disable-next-line max-len
         'Path Validation Error: Path(s) specified in the action for caching do(es) not exist, hence no cache is being saved.');
     }
-    const archiveFolder = (0, local_1.getLocalArchiveFolder)(key);
+    const archiveFolder = await (0, local_1.getLocalArchiveFolder)(key);
     await io.mkdirP(archiveFolder);
     const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
     core.debug(`Archive Path: ${archivePath}`);

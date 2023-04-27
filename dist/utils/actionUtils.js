@@ -32,7 +32,6 @@ function isGhes() {
 }
 exports.isGhes = isGhes;
 function isExactKeyMatch(key, cacheKey) {
-    console.log('isExactKeyMatch', key, cacheKey);
     return !!(cacheKey
         && cacheKey.localeCompare(key, undefined, {
             sensitivity: 'accent',

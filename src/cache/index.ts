@@ -146,7 +146,7 @@ export async function saveCache(
     )
   }
 
-  const archiveFolder = getLocalArchiveFolder(key)
+  const archiveFolder = await getLocalArchiveFolder(key)
   await io.mkdirP(archiveFolder)
   const archivePath = path.join(
     archiveFolder,

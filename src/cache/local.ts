@@ -8,6 +8,11 @@ interface CacheResult {
   archiveLocation: string,
 }
 
+interface CacheCandidate {
+  cacheKey?: string,
+  cacheBirthtimeMs: number,
+}
+
 export async function getLocalCacheEntry(
   keys: string[],
   compressionMethod: CompressionMethod,
@@ -47,13 +52,15 @@ export async function getLocalArchiveFolder(key: string, findKey = false): Promi
   if (!findKey || await exists(primaryCacheKey)) return primaryCacheKey
 
   const files = await readdir(cachePath)
-  const cacheKey = await files.reduce<Promise<string | undefined>>(async (memo, file) => {
-    await memo
-    if (!file.startsWith(key)) return memo
+  const { cacheKey } = await files.reduce<Promise<CacheCandidate>>(async (asyncMemo, file) => {
+    const memo = await asyncMemo
     const stats = await lstat(path.join(cachePath, file))
-    if (!stats.isDirectory()) return memo
-    return file
-  }, Promise.resolve(undefined))
+    if (!file.startsWith(key) || !stats.isDirectory()) return memo
+    if (stats.birthtimeMs > memo.cacheBirthtimeMs) {
+      return { cacheKey: file, cacheBirthtimeMs: stats.birthtimeMs }
+    }
+    return memo
+  }, Promise.resolve({ cacheKey: undefined, cacheBirthtimeMs: 0 }))
   if (!cacheKey) return undefined
 
   return path.join(cachePath, cacheKey)

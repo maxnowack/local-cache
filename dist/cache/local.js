@@ -62,15 +62,16 @@ async function getLocalArchiveFolder(key, findKey = false) {
     if (!findKey || await (0, io_util_1.exists)(primaryCacheKey))
         return primaryCacheKey;
     const files = await (0, io_util_1.readdir)(cachePath);
-    const cacheKey = await files.reduce(async (memo, file) => {
-        await memo;
-        if (!file.startsWith(key))
-            return memo;
+    const { cacheKey } = await files.reduce(async (asyncMemo, file) => {
+        const memo = await asyncMemo;
         const stats = await (0, io_util_1.lstat)(path.join(cachePath, file));
-        if (!stats.isDirectory())
+        if (!file.startsWith(key) || !stats.isDirectory())
             return memo;
-        return file;
-    }, Promise.resolve(undefined));
+        if (stats.birthtimeMs > memo.cacheBirthtimeMs) {
+            return { cacheKey: file, cacheBirthtimeMs: stats.birthtimeMs };
+        }
+        return memo;
+    }, Promise.resolve({ cacheKey: undefined, cacheBirthtimeMs: 0 }));
     if (!cacheKey)
         return undefined;
     return path.join(cachePath, cacheKey);

@@ -22,7 +22,7 @@ outputs:
   cache-hit:
     description: 'A boolean value to indicate if cache was found and restored'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/restore.js'
   post: 'dist/save.js'
   post-if: success()

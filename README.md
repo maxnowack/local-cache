@@ -1,5 +1,5 @@
 # local-cache
-Github Action to provide caching data by placing a tarball on the local filesystem. The goal of this action is to speed up saving and restoring of the cache and remove the http overhead that occurs when using the `actions/cache` action.
+GitHub Actions to provide caching data by placing a tarball on the local filesystem. The goal of this action is to speed up saving and restoring of the cache and remove the http overhead that occurs when using the `actions/cache` action.
 This action is designed for use with runners that have persistent storage. Please only use this action with self-hosted runners that have a persistent volume. It will not work properly on GitHub hosted runners or runners with ephemeral storage, as the cache will be deleted upon job completion.
 
 ## Usage
@@ -22,11 +22,11 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Cache Primes
       id: cache-primes
-      uses: maxnowack/local-cache@v1
+      uses: maxnowack/local-cache@v2
       with:
         path: prime-numbers
         key: ${{ runner.os }}-primes

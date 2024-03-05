@@ -5,7 +5,7 @@
   "description": "Github Action to provide caching data by placing a tarball on the local filesystem",
   "main": "dist/main/index.ts",
   "engines": {
-    "node": "^16.13.0"
+    "node": "^20.11.0"
   },
   "scripts": {
     "prepare": "npm run build",

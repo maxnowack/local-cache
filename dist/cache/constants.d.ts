@@ -1,9 +1,11 @@
 export declare enum CacheFilename {
     Gzip = "cache.tgz",
-    Zstd = "cache.tzst"
+    Zstd = "cache.tzst",
+    Lz4 = "cache.tlz4"
 }
 export declare enum CompressionMethod {
     Gzip = "gzip",
+    Lz4 = "lz4",
     ZstdWithoutLong = "zstd-without-long",
     Zstd = "zstd"
 }

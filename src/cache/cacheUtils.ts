@@ -7,6 +7,7 @@ import * as glob from '@actions/glob'
 import * as io from '@actions/io'
 import * as semver from 'semver'
 import { v4 as uuidV4 } from 'uuid'
+import { Inputs } from '../constants'
 import {
   CacheFilename,
   CompressionMethod,
@@ -39,6 +40,35 @@ export async function createTempDirectory(): Promise<string> {
 
 export function getArchiveFileSizeInBytes(filePath: string): number {
   return fs.statSync(filePath).size
+}
+
+function getPathSizeInBytes(filePath: string): number {
+  const stats = fs.lstatSync(filePath)
+
+  if (!stats.isDirectory()) {
+    return stats.size
+  }
+
+  return fs.readdirSync(filePath).reduce(
+    (total, entry) => total + getPathSizeInBytes(path.join(filePath, entry)),
+    0,
+  )
+}
+
+export function getCacheSizeInBytes(paths: string[]): number {
+  const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd()
+
+  return paths.reduce((total, cachePath) => {
+    const filePath = path.isAbsolute(cachePath)
+      ? cachePath
+      : path.join(workspace, cachePath)
+
+    if (!fs.existsSync(filePath)) {
+      return total
+    }
+
+    return total + getPathSizeInBytes(filePath)
+  }, 0)
 }
 
 export async function resolvePaths(patterns: string[]): Promise<string[]> {
@@ -103,6 +133,22 @@ async function getVersion(
 
 // Use zstandard if possible to maximize cache performance
 export async function getCompressionMethod(): Promise<CompressionMethod> {
+  const compressionMode = core.getInput(Inputs.CompressionMode) || 'auto'
+  switch (compressionMode.toLowerCase()) {
+    case 'auto':
+      break
+    case CompressionMethod.Gzip:
+      return CompressionMethod.Gzip
+    case CompressionMethod.Lz4:
+      return CompressionMethod.Lz4
+    case CompressionMethod.Zstd:
+      return CompressionMethod.ZstdWithoutLong
+    default:
+      throw new Error(
+        `Unsupported compression mode: ${compressionMode}. Supported modes are: auto, gzip, zstd, lz4.`,
+      )
+  }
+
   const versionOutput = await getVersion('zstd', ['--quiet'])
   const version = semver.clean(versionOutput)
   core.debug(`zstd version: ${version}`)
@@ -114,9 +160,18 @@ export async function getCompressionMethod(): Promise<CompressionMethod> {
 }
 
 export function getCacheFileName(compressionMethod: CompressionMethod): string {
-  return compressionMethod === CompressionMethod.Gzip
-    ? CacheFilename.Gzip
-    : CacheFilename.Zstd
+  switch (compressionMethod) {
+    case CompressionMethod.Gzip:
+      return CacheFilename.Gzip
+    case CompressionMethod.Lz4:
+      return CacheFilename.Lz4
+    default:
+      return CacheFilename.Zstd
+  }
+}
+
+export function getCompressionArgs(): string {
+  return core.getInput(Inputs.CompressionArgs).trim()
 }
 
 export async function getGnuTarPathOnWindows(): Promise<string> {

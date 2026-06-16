@@ -96,8 +96,11 @@ async function restoreCache(paths, primaryKey, restoreKeys, lookupOnly) {
             await (0, tar_1.listTar)(archivePath, compressionMethod);
         }
         const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
-        core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
+        core.info(`Cache Size before decompression: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
         await (0, tar_1.extractTar)(archivePath, compressionMethod);
+        const cachePaths = await utils.resolvePaths(paths);
+        const cacheSizeAfterDecompression = utils.getCacheSizeInBytes(cachePaths);
+        core.info(`Cache Size after decompression: ~${Math.round(cacheSizeAfterDecompression / (1024 * 1024))} MB (${cacheSizeAfterDecompression} B)`);
         core.info('Cache restored successfully');
         return cacheEntry.cacheKey;
     }
@@ -140,12 +143,15 @@ async function saveCache(paths, key) {
     const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
     core.debug(`Archive Path: ${archivePath}`);
     try {
+        const cacheSizeBeforeCompression = utils.getCacheSizeInBytes(cachePaths);
+        core.info(`Cache Size before compression: ~${Math.round(cacheSizeBeforeCompression / (1024 * 1024))} MB (${cacheSizeBeforeCompression} B)`);
         await (0, tar_1.createTar)(archiveFolder, cachePaths, compressionMethod);
         if (core.isDebug()) {
             await (0, tar_1.listTar)(archivePath, compressionMethod);
         }
         const fileSizeLimit = 10 * 1024 * 1024 * 1024; // 10GB per repo limit
         const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
+        core.info(`Cache Size after compression: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
         core.debug(`File Size: ${archiveFileSize}`);
         // For GHES, this check will take place in ReserveCache API with enterprise file size limit
         if (archiveFileSize > fileSizeLimit && !utils.isGhes()) {

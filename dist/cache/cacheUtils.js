@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isGhes = exports.assertDefined = exports.getGnuTarPathOnWindows = exports.getCacheFileName = exports.getCompressionMethod = exports.unlinkFile = exports.resolvePaths = exports.getArchiveFileSizeInBytes = exports.createTempDirectory = void 0;
+exports.isGhes = exports.assertDefined = exports.getGnuTarPathOnWindows = exports.getCompressionArgs = exports.getCacheFileName = exports.getCompressionMethod = exports.unlinkFile = exports.resolvePaths = exports.getCacheSizeInBytes = exports.getArchiveFileSizeInBytes = exports.createTempDirectory = void 0;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const util = __importStar(require("util"));
@@ -33,7 +33,8 @@ const glob = __importStar(require("@actions/glob"));
 const io = __importStar(require("@actions/io"));
 const semver = __importStar(require("semver"));
 const uuid_1 = require("uuid");
-const constants_1 = require("./constants");
+const constants_1 = require("../constants");
+const constants_2 = require("./constants");
 // From https://github.com/actions/toolkit/blob/main/packages/tool-cache/src/tool-cache.ts#L23
 async function createTempDirectory() {
     const IS_WINDOWS = process.platform === 'win32';
@@ -61,6 +62,26 @@ function getArchiveFileSizeInBytes(filePath) {
     return fs.statSync(filePath).size;
 }
 exports.getArchiveFileSizeInBytes = getArchiveFileSizeInBytes;
+function getPathSizeInBytes(filePath) {
+    const stats = fs.lstatSync(filePath);
+    if (!stats.isDirectory()) {
+        return stats.size;
+    }
+    return fs.readdirSync(filePath).reduce((total, entry) => total + getPathSizeInBytes(path.join(filePath, entry)), 0);
+}
+function getCacheSizeInBytes(paths) {
+    const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
+    return paths.reduce((total, cachePath) => {
+        const filePath = path.isAbsolute(cachePath)
+            ? cachePath
+            : path.join(workspace, cachePath);
+        if (!fs.existsSync(filePath)) {
+            return total;
+        }
+        return total + getPathSizeInBytes(filePath);
+    }, 0);
+}
+exports.getCacheSizeInBytes = getCacheSizeInBytes;
 async function resolvePaths(patterns) {
     const paths = [];
     const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
@@ -118,24 +139,46 @@ async function getVersion(app, additionalArgs = []) {
 }
 // Use zstandard if possible to maximize cache performance
 async function getCompressionMethod() {
+    const compressionMode = core.getInput(constants_1.Inputs.CompressionMode) || 'auto';
+    switch (compressionMode.toLowerCase()) {
+        case 'auto':
+            break;
+        case constants_2.CompressionMethod.Gzip:
+            return constants_2.CompressionMethod.Gzip;
+        case constants_2.CompressionMethod.Lz4:
+            return constants_2.CompressionMethod.Lz4;
+        case constants_2.CompressionMethod.Zstd:
+            return constants_2.CompressionMethod.ZstdWithoutLong;
+        default:
+            throw new Error(`Unsupported compression mode: ${compressionMode}. Supported modes are: auto, gzip, zstd, lz4.`);
+    }
     const versionOutput = await getVersion('zstd', ['--quiet']);
     const version = semver.clean(versionOutput);
     core.debug(`zstd version: ${version}`);
     if (versionOutput === '') {
-        return constants_1.CompressionMethod.Gzip;
+        return constants_2.CompressionMethod.Gzip;
     }
-    return constants_1.CompressionMethod.ZstdWithoutLong;
+    return constants_2.CompressionMethod.ZstdWithoutLong;
 }
 exports.getCompressionMethod = getCompressionMethod;
 function getCacheFileName(compressionMethod) {
-    return compressionMethod === constants_1.CompressionMethod.Gzip
-        ? constants_1.CacheFilename.Gzip
-        : constants_1.CacheFilename.Zstd;
+    switch (compressionMethod) {
+        case constants_2.CompressionMethod.Gzip:
+            return constants_2.CacheFilename.Gzip;
+        case constants_2.CompressionMethod.Lz4:
+            return constants_2.CacheFilename.Lz4;
+        default:
+            return constants_2.CacheFilename.Zstd;
+    }
 }
 exports.getCacheFileName = getCacheFileName;
+function getCompressionArgs() {
+    return core.getInput(constants_1.Inputs.CompressionArgs).trim();
+}
+exports.getCompressionArgs = getCompressionArgs;
 async function getGnuTarPathOnWindows() {
-    if (fs.existsSync(constants_1.GnuTarPathOnWindows)) {
-        return constants_1.GnuTarPathOnWindows;
+    if (fs.existsSync(constants_2.GnuTarPathOnWindows)) {
+        return constants_2.GnuTarPathOnWindows;
     }
     const versionOutput = await getVersion('tar');
     return versionOutput.toLowerCase().includes('gnu tar') ? io.which('tar') : '';

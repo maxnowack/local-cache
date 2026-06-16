@@ -18,6 +18,13 @@ inputs:
     description: 'Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache'
     default: 'false'
     required: false
+  compression-mode:
+    description: 'Compression mode to use for cache archives. Supported values are auto, gzip, zstd, and lz4.'
+    default: 'auto'
+    required: false
+  compression-args:
+    description: 'Additional arguments to pass to the compression program when saving or restoring a cache archive.'
+    required: false
 outputs:
   cache-hit:
     description: 'A boolean value to indicate if cache was found and restored'

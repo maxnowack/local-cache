@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isGhes = exports.assertDefined = exports.getGnuTarPathOnWindows = exports.getCacheFileName = exports.getCompressionMethod = exports.unlinkFile = exports.resolvePaths = exports.getCacheSizeInBytes = exports.getArchiveFileSizeInBytes = exports.createTempDirectory = void 0;
+exports.isGhes = exports.assertDefined = exports.getGnuTarPathOnWindows = exports.getCompressionArgs = exports.getCacheFileName = exports.getCompressionMethod = exports.unlinkFile = exports.resolvePaths = exports.getCacheSizeInBytes = exports.getArchiveFileSizeInBytes = exports.createTempDirectory = void 0;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const util = __importStar(require("util"));
@@ -172,6 +172,10 @@ function getCacheFileName(compressionMethod) {
     }
 }
 exports.getCacheFileName = getCacheFileName;
+function getCompressionArgs() {
+    return core.getInput(constants_1.Inputs.CompressionArgs).trim();
+}
+exports.getCompressionArgs = getCompressionArgs;
 async function getGnuTarPathOnWindows() {
     if (fs.existsSync(constants_2.GnuTarPathOnWindows)) {
         return constants_2.GnuTarPathOnWindows;

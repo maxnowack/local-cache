@@ -24,6 +24,9 @@ function setInputs(input) {
     if (input.compressionMode !== undefined) {
         setInput(constants_1.Inputs.CompressionMode, input.compressionMode);
     }
+    if (input.compressionArgs !== undefined) {
+        setInput(constants_1.Inputs.CompressionArgs, input.compressionArgs);
+    }
 }
 exports.setInputs = setInputs;
 function clearInputs() {
@@ -33,5 +36,6 @@ function clearInputs() {
     delete process.env[getInputName(constants_1.Inputs.FailOnCacheMiss)];
     delete process.env[getInputName(constants_1.Inputs.LookupOnly)];
     delete process.env[getInputName(constants_1.Inputs.CompressionMode)];
+    delete process.env[getInputName(constants_1.Inputs.CompressionArgs)];
 }
 exports.clearInputs = clearInputs;

@@ -11,6 +11,9 @@ inputs:
     description: 'Compression mode to use for cache archives. Supported values are auto, gzip, zstd, and lz4.'
     default: 'auto'
     required: false
+  compression-args:
+    description: 'Additional arguments to pass to the compression program when saving a cache archive.'
+    required: false
 runs:
   using: 'node20'
   main: '../dist/saveOnly.js'

@@ -4,7 +4,8 @@ export declare enum Inputs {
     RestoreKeys = "restore-keys",
     FailOnCacheMiss = "fail-on-cache-miss",
     LookupOnly = "lookup-only",
-    CompressionMode = "compression-mode"
+    CompressionMode = "compression-mode",
+    CompressionArgs = "compression-args"
 }
 export declare enum Outputs {
     CacheHit = "cache-hit",

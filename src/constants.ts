@@ -4,7 +4,8 @@ export enum Inputs {
   RestoreKeys = 'restore-keys', // Input for cache, restore action
   FailOnCacheMiss = 'fail-on-cache-miss', // Input for cache, restore action
   LookupOnly = 'lookup-only', // Input for cache, restore action
-  CompressionMode = 'compression-mode' // Input for cache, restore, save action
+  CompressionMode = 'compression-mode', // Input for cache, restore, save action
+  CompressionArgs = 'compression-args' // Input for cache, restore, save action
 }
 
 export enum Outputs {

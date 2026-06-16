@@ -170,6 +170,10 @@ export function getCacheFileName(compressionMethod: CompressionMethod): string {
   }
 }
 
+export function getCompressionArgs(): string {
+  return core.getInput(Inputs.CompressionArgs).trim()
+}
+
 export async function getGnuTarPathOnWindows(): Promise<string> {
   if (fs.existsSync(GnuTarPathOnWindows)) {
     return GnuTarPathOnWindows

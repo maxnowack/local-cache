@@ -96,12 +96,19 @@ export async function restoreCache(
 
     const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath)
     core.info(
-      `Cache Size: ~${Math.round(
+      `Cache Size before decompression: ~${Math.round(
         archiveFileSize / (1024 * 1024),
       )} MB (${archiveFileSize} B)`,
     )
 
     await extractTar(archivePath, compressionMethod)
+    const cachePaths = await utils.resolvePaths(paths)
+    const cacheSizeAfterDecompression = utils.getCacheSizeInBytes(cachePaths)
+    core.info(
+      `Cache Size after decompression: ~${Math.round(
+        cacheSizeAfterDecompression / (1024 * 1024),
+      )} MB (${cacheSizeAfterDecompression} B)`,
+    )
     core.info('Cache restored successfully')
 
     return cacheEntry.cacheKey

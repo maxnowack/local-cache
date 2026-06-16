@@ -52,7 +52,10 @@ The action defaults to `compression-mode: auto`. To force lz4 compression on run
     path: prime-numbers
     key: ${{ runner.os }}-primes
     compression-mode: lz4
+    compression-args: --fast=2
 ````
+
+`compression-args` are passed to the active compression program. In a save step they tune compression; in a restore step they tune decompression.
 
 ## Contributing
 

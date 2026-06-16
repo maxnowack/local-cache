@@ -22,6 +22,9 @@ inputs:
     description: 'Compression mode to use for cache archives. Supported values are auto, gzip, zstd, and lz4.'
     default: 'auto'
     required: false
+  compression-args:
+    description: 'Additional arguments to pass to the compression program when restoring a cache archive.'
+    required: false
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key'

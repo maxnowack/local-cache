@@ -17,6 +17,7 @@ interface CacheInput {
   failOnCacheMiss?: boolean,
   lookupOnly?: boolean,
   compressionMode?: string,
+  compressionArgs?: string,
 }
 
 export function setInputs(input: CacheInput): void {
@@ -32,6 +33,9 @@ export function setInputs(input: CacheInput): void {
   if (input.compressionMode !== undefined) {
     setInput(Inputs.CompressionMode, input.compressionMode)
   }
+  if (input.compressionArgs !== undefined) {
+    setInput(Inputs.CompressionArgs, input.compressionArgs)
+  }
 }
 
 export function clearInputs(): void {
@@ -41,4 +45,5 @@ export function clearInputs(): void {
   delete process.env[getInputName(Inputs.FailOnCacheMiss)]
   delete process.env[getInputName(Inputs.LookupOnly)]
   delete process.env[getInputName(Inputs.CompressionMode)]
+  delete process.env[getInputName(Inputs.CompressionArgs)]
 }

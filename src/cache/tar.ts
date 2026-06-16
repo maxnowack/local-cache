@@ -173,6 +173,15 @@ function getWorkingDirectory(): string {
   return process.env.GITHUB_WORKSPACE ?? process.cwd()
 }
 
+function appendCompressionArgs(command: string): string {
+  const compressionArgs = utils.getCompressionArgs()
+  return compressionArgs ? `${command} ${compressionArgs}` : command
+}
+
+function getUseCompressProgram(command: string): string {
+  return `"${appendCompressionArgs(command)}"`
+}
+
 // Common function for extractTar and listTar to get the compression method
 function getDecompressionProgram(
   tarPath: ArchiveTool,
@@ -190,30 +199,42 @@ function getDecompressionProgram(
     case CompressionMethod.Lz4:
       return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
         ? [
-          'lz4 -d --force',
+          appendCompressionArgs('lz4 -d --force'),
           archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
           TarFilename,
         ]
-        : ['--use-compress-program', IS_WINDOWS ? '"lz4 -d"' : 'lz4 -d'])
+        : [
+          '--use-compress-program',
+          getUseCompressProgram('lz4 -d'),
+        ])
     case CompressionMethod.Zstd:
       return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
         ? [
-          'zstd -d --long=30 --force -o',
+          appendCompressionArgs('zstd -d --long=30 --force -o'),
           TarFilename,
           archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
         ]
         : [
           '--use-compress-program',
-          IS_WINDOWS ? '"zstd -d --long=30"' : 'unzstd --long=30',
+          getUseCompressProgram(
+            IS_WINDOWS ? 'zstd -d --long=30' : 'unzstd --long=30',
+          ),
         ])
     case CompressionMethod.ZstdWithoutLong:
       return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
         ? [
-          'zstd -d --force -o',
+          appendCompressionArgs('zstd -d --force -o'),
           TarFilename,
           archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
         ]
-        : ['--use-compress-program', IS_WINDOWS ? '"zstd -d"' : 'unzstd'])
+        : [
+          '--use-compress-program',
+          getUseCompressProgram(IS_WINDOWS ? 'zstd -d' : 'unzstd'),
+        ])
+    case CompressionMethod.Gzip:
+      return Promise.resolve(utils.getCompressionArgs()
+        ? ['--use-compress-program', getUseCompressProgram('gzip -d')]
+        : ['-z'])
     default:
       return Promise.resolve(['-z'])
   }
@@ -237,30 +258,39 @@ function getCompressionProgram(
     case CompressionMethod.Lz4:
       return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
         ? [
-          'lz4 --force',
+          appendCompressionArgs('lz4 --force'),
           TarFilename,
           cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
         ]
-        : ['--use-compress-program', 'lz4'])
+        : ['--use-compress-program', getUseCompressProgram('lz4')])
     case CompressionMethod.Zstd:
       return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
         ? [
-          'zstd -T0 --long=30 --force -o',
+          appendCompressionArgs('zstd -T0 --long=30 --force -o'),
           cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
           TarFilename,
         ]
         : [
           '--use-compress-program',
-          IS_WINDOWS ? '"zstd -T0 --long=30"' : 'zstdmt --long=30',
+          getUseCompressProgram(
+            IS_WINDOWS ? 'zstd -T0 --long=30' : 'zstdmt --long=30',
+          ),
         ])
     case CompressionMethod.ZstdWithoutLong:
       return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
         ? [
-          'zstd -T0 --force -o',
+          appendCompressionArgs('zstd -T0 --force -o'),
           cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
           TarFilename,
         ]
-        : ['--use-compress-program', IS_WINDOWS ? '"zstd -T0"' : 'zstdmt'])
+        : [
+          '--use-compress-program',
+          getUseCompressProgram(IS_WINDOWS ? 'zstd -T0' : 'zstdmt'),
+        ])
+    case CompressionMethod.Gzip:
+      return Promise.resolve(utils.getCompressionArgs()
+        ? ['--use-compress-program', getUseCompressProgram('gzip')]
+        : ['-z'])
     default:
       return Promise.resolve(['-z'])
   }

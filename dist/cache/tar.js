@@ -68,10 +68,10 @@ async function getTarPath() {
 }
 async function getCacheFileName(compressionMethod, resolveTarPath = getTarPath()) {
     const tarPath = await resolveTarPath;
-    const BSD_TAR_ZSTD = tarPath.type === constants_1.ArchiveToolType.BSD
+    const BSD_TAR_EXTERNAL_COMPRESSION = tarPath.type === constants_1.ArchiveToolType.BSD
         && compressionMethod !== constants_1.CompressionMethod.Gzip
         && IS_WINDOWS;
-    return BSD_TAR_ZSTD
+    return BSD_TAR_EXTERNAL_COMPRESSION
         ? 'cache.tar'
         : utils.getCacheFileName(compressionMethod);
 }
@@ -82,8 +82,8 @@ async function getTarArgs(tarPath, compressionMethod, type, archivePath = '') {
     const cacheFileName = path.join(archivePath, await getCacheFileName(compressionMethod, Promise.resolve(tarPath)));
     const tarFile = 'cache.tar';
     const workingDirectory = getWorkingDirectory();
-    // Speficic args for BSD tar on windows for workaround
-    const BSD_TAR_ZSTD = tarPath.type === constants_1.ArchiveToolType.BSD
+    // Specific args for BSD tar on windows for workaround
+    const BSD_TAR_EXTERNAL_COMPRESSION = tarPath.type === constants_1.ArchiveToolType.BSD
         && compressionMethod !== constants_1.CompressionMethod.Gzip
         && IS_WINDOWS;
     // Method specific args
@@ -92,12 +92,12 @@ async function getTarArgs(tarPath, compressionMethod, type, archivePath = '') {
             args.push('--posix', '-cf', cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '--files-from', constants_1.ManifestFilename);
             break;
         case 'extract':
-            args.push('-xf', BSD_TAR_ZSTD
+            args.push('-xf', BSD_TAR_EXTERNAL_COMPRESSION
                 ? tarFile
                 : archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'));
             break;
         case 'list':
-            args.push('-tf', BSD_TAR_ZSTD
+            args.push('-tf', BSD_TAR_EXTERNAL_COMPRESSION
                 ? tarFile
                 : archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P');
             break;
@@ -125,16 +125,16 @@ async function getCommands(compressionMethod, type, archivePath = '') {
     const compressionArgs = type !== 'create'
         ? await getDecompressionProgram(tarPath, compressionMethod, archivePath)
         : await getCompressionProgram(tarPath, compressionMethod);
-    const BSD_TAR_ZSTD = tarPath.type === constants_1.ArchiveToolType.BSD
+    const BSD_TAR_EXTERNAL_COMPRESSION = tarPath.type === constants_1.ArchiveToolType.BSD
         && compressionMethod !== constants_1.CompressionMethod.Gzip
         && IS_WINDOWS;
-    if (BSD_TAR_ZSTD && type !== 'create') {
+    if (BSD_TAR_EXTERNAL_COMPRESSION && type !== 'create') {
         args = [[...compressionArgs].join(' '), [...tarArgs].join(' ')];
     }
     else {
         args = [[...tarArgs].join(' '), [...compressionArgs].join(' ')];
     }
-    if (BSD_TAR_ZSTD) {
+    if (BSD_TAR_EXTERNAL_COMPRESSION) {
         return args;
     }
     return [args.join(' ')];
@@ -148,12 +148,20 @@ function getDecompressionProgram(tarPath, compressionMethod, archivePath) {
     // unzstd is equivalent to 'zstd -d'
     // --long=#: Enables long distance matching with # bits. Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
     // Using 30 here because we also support 32-bit self-hosted runners.
-    const BSD_TAR_ZSTD = tarPath.type === constants_1.ArchiveToolType.BSD
+    const BSD_TAR_EXTERNAL_COMPRESSION = tarPath.type === constants_1.ArchiveToolType.BSD
         && compressionMethod !== constants_1.CompressionMethod.Gzip
         && IS_WINDOWS;
     switch (compressionMethod) {
+        case constants_1.CompressionMethod.Lz4:
+            return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
+                ? [
+                    'lz4 -d --force',
+                    archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
+                    constants_1.TarFilename,
+                ]
+                : ['--use-compress-program', IS_WINDOWS ? '"lz4 -d"' : 'lz4 -d']);
         case constants_1.CompressionMethod.Zstd:
-            return Promise.resolve(BSD_TAR_ZSTD
+            return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
                 ? [
                     'zstd -d --long=30 --force -o',
                     constants_1.TarFilename,
@@ -164,7 +172,7 @@ function getDecompressionProgram(tarPath, compressionMethod, archivePath) {
                     IS_WINDOWS ? '"zstd -d --long=30"' : 'unzstd --long=30',
                 ]);
         case constants_1.CompressionMethod.ZstdWithoutLong:
-            return Promise.resolve(BSD_TAR_ZSTD
+            return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
                 ? [
                     'zstd -d --force -o',
                     constants_1.TarFilename,
@@ -183,12 +191,20 @@ function getDecompressionProgram(tarPath, compressionMethod, archivePath) {
 // Long range mode is added to zstd in v1.3.2 release, so we will not use --long in older version of zstd.
 function getCompressionProgram(tarPath, compressionMethod) {
     const cacheFileName = utils.getCacheFileName(compressionMethod);
-    const BSD_TAR_ZSTD = tarPath.type === constants_1.ArchiveToolType.BSD
+    const BSD_TAR_EXTERNAL_COMPRESSION = tarPath.type === constants_1.ArchiveToolType.BSD
         && compressionMethod !== constants_1.CompressionMethod.Gzip
         && IS_WINDOWS;
     switch (compressionMethod) {
+        case constants_1.CompressionMethod.Lz4:
+            return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
+                ? [
+                    'lz4 --force',
+                    constants_1.TarFilename,
+                    cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
+                ]
+                : ['--use-compress-program', 'lz4']);
         case constants_1.CompressionMethod.Zstd:
-            return Promise.resolve(BSD_TAR_ZSTD
+            return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
                 ? [
                     'zstd -T0 --long=30 --force -o',
                     cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
@@ -199,7 +215,7 @@ function getCompressionProgram(tarPath, compressionMethod) {
                     IS_WINDOWS ? '"zstd -T0 --long=30"' : 'zstdmt --long=30',
                 ]);
         case constants_1.CompressionMethod.ZstdWithoutLong:
-            return Promise.resolve(BSD_TAR_ZSTD
+            return Promise.resolve(BSD_TAR_EXTERNAL_COMPRESSION
                 ? [
                     'zstd -T0 --force -o',
                     cacheFileName.replace(new RegExp(`\\${path.sep}`, 'g'), '/'),

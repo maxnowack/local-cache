@@ -6,6 +6,7 @@ interface CacheInput {
     enableCrossOsArchive?: boolean;
     failOnCacheMiss?: boolean;
     lookupOnly?: boolean;
+    compressionMode?: string;
 }
 export declare function setInputs(input: CacheInput): void;
 export declare function clearInputs(): void;

@@ -10,6 +10,8 @@ The created cache tarballs are placed in `$RUNNER_TOOL_CACHE/$GITHUB_REPOSITORY`
 `GITHUB_REPOSITORY` will be set to the name (`org/repo`) of the repository from where the action is executed. 
 `RUNNER_TOOL_CACHE` defaults to `/opt/hostedtoolcache`. This should point to a folder on a persistent storage.
 
+By default, `compression-mode` is `auto`, which keeps the existing behavior of using zstd when available and gzip otherwise. You can set it to `gzip`, `zstd`, or `lz4` to force a specific mode. Changing this mode changes the archive format, so existing caches created with another compression mode will not be restored. Archive filenames use `cache.tgz` for gzip, `cache.tzst` for zstd, and `cache.tlz4` for lz4. When using `lz4`, make sure the `lz4` command is installed on the runner.
+
 ### Example cache workflow
 
 ````yaml
@@ -38,6 +40,18 @@ jobs:
     - name: Use Prime Numbers
       run: /primes.sh -d prime-numbers
 
+````
+
+### Compression mode
+
+The action defaults to `compression-mode: auto`. To force lz4 compression on runners where `lz4` is installed:
+
+````yaml
+- uses: maxnowack/local-cache@v2
+  with:
+    path: prime-numbers
+    key: ${{ runner.os }}-primes
+    compression-mode: lz4
 ````
 
 ## Contributing

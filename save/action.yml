@@ -7,6 +7,10 @@ inputs:
   key:
     description: 'An explicit key for saving the cache'
     required: true
+  compression-mode:
+    description: 'Compression mode to use for cache archives. Supported values are auto, gzip, zstd, and lz4.'
+    default: 'auto'
+    required: false
 runs:
   using: 'node20'
   main: '../dist/saveOnly.js'
